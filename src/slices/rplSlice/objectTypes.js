@@ -1,0 +1,5 @@
+export const NUMBER = 'number'
+export const COMMAND = 'command'
+export const STRING = 'string'
+export const VAR = 'var'
+export const LIST = 'list'

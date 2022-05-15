@@ -1,0 +1,64 @@
+.StackZone {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.Stack {
+    width: 100%;
+    flex-grow: 1;
+
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0px;
+}
+
+/*
+.Stack * {
+    border: 1px solid red;
+}
+*/
+
+.StackItem {
+    text-align: left;
+}
+
+.Error {
+    color: #ff2211;
+    font-weight: bold;
+}
+
+.StackLevel, .StackElement {
+    display: inline-block;
+    padding: 0 5px;
+}
+
+.StackLevel {
+
+    width: 50px;
+    text-align: right;
+}
+
+.StackLevel {
+    width: 120px;
+}
+
+.StackForm {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.Input {
+    flex-grow: 1;
+}

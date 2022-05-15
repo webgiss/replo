@@ -1,0 +1,91 @@
+name: 'deploy'
+
+on:
+    push:
+        tags:
+            - 'v*'
+
+jobs:
+    deploy:
+        name: 'Deploy'
+        runs-on: ubuntu-latest
+        steps:
+            - name: "Checkout"
+              uses: actions/checkout@v2
+
+            - name : "Configure git"
+              run : |
+                  git config "user.name" "github-actions"
+                  git config "user.email" "public-dev-github-actions-replo@gissehel.org"
+
+            - name: "Set environment variables"
+              run: |
+                  echo "REFNAME=$(echo "${{ github.ref }}" | sed -e 's/.*\///')" >> "${GITHUB_ENV}"
+
+            - name: "Workaround in case of release documentation doesn't exist"
+              run: |
+                filename="doc/releases/${{ env.REFNAME }}.md"
+                [ -f "${filename}" ] || touch "${filename}"
+
+            - name: "Setup node"
+              uses: actions/setup-node@v2
+              with:
+                  node-version: "16"
+          
+            - name: "Build"
+              run: |
+                  yarn
+                  yarn create-example-cache
+                  yarn build
+                  yarn build-storybook
+                  yarn test:html
+
+            - name: "Create Replo assets"
+              run: |
+                  ref="${{ github.ref }}"
+
+                  site_name="replo-site-${ref#refs/tags/v*}"
+                  # storybook_name="replo-storybook-${ref#refs/tags/v*}"
+                  # test_name="replo-test-${ref#refs/tags/v*}"
+
+                  mv "build" "${site_name}"
+                  zip -r "${site_name}.zip" "${site_name}"
+                  tar cvzf "${site_name}.tar.gz" "${site_name}"
+                  mv "${site_name}" build
+
+                  # mv "storybook-static" "${storybook_name}"
+                  # zip -r "${storybook_name}.zip" "${storybook_name}"
+                  # tar cvzf "${storybook_name}.tar.gz" "${storybook_name}"
+                  # mv "${storybook_name}" storybook
+
+                  # mv "jest_html_reporters.html" "${test_name}.html"
+                  # cp "${test_name}.html" "test.html"
+
+            - name: "Move storybook to build dir"
+              run: |
+                  echo "replo.jgi.fr" > build/CNAME
+                  # mv storybook build/storybook
+                  # mkdir -p build/test
+                  # mv test.html build/test/index.html
+                  touch build/.nojekyll
+
+            - name: "Deploy to GitHub Pages"
+              if: success()
+              uses: crazy-max/ghaction-github-pages@v2
+              with:
+                target_branch: gh-pages
+                build_dir: build
+              env:
+                GITHUB_TOKEN: ${{ secrets.DEPLOY_PAT }}
+
+            - name: "Create release"
+              if: success()
+              uses: "softprops/action-gh-release@v1"
+              with:
+                  body:
+                  body_path: doc/releases/${{ env.REFNAME }}.md
+                  files: |
+                    replo-*.zip
+                    replo-*.tar.gz
+                  draft: false
+                  prerelease: false
