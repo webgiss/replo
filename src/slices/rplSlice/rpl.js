@@ -1,9 +1,18 @@
-import { createCommand, createList, createNumber, createVar, dupObject } from "./objects"
-import { COMMAND, LIST, NUMBER } from "./objectTypes"
+import { createCommand, createKeyword, createList, createNumber, createVar, dupObject } from "./objects"
+import { COMMAND, LIST, NUMBER, VAR } from "./objectTypes"
+
+export const setError = (state, text, keepInput) => {
+    state.error = text
+    if (keepInput) {
+        state.keepInput = true
+    } else {
+        state.keepInput = false
+    }
+}
 
 export const requireStack = (state, n) => {
     if (state.stack.length < n) {
-        state.error = 'Too few arguments'
+        setError(state, 'Too few arguments')
         return false
     }
     return true
@@ -15,8 +24,8 @@ export const requireStackTypes = (state, n, types) => {
     }
     const { length } = state.stack
     for (let index = 0; index < n; index++) {
-        if (state.stack[length - n + index].type !== types[index]) {
-            state.error = `Bad argument type; element [${n - index}] should of type <${types[index]}>`
+        if ((types[index] !== null) && (state.stack[length - n + index].type !== types[index])) {
+            setError(state, `Bad argument type; element [${n - index}] should of type <${types[index]}>`)
             return false
         }
     }
@@ -25,7 +34,7 @@ export const requireStackTypes = (state, n, types) => {
 
 export const cleanErrorState = (state) => {
     if (state.error !== null) {
-        state.error = null
+        setError(state, null)
     }
 }
 
@@ -38,6 +47,14 @@ export const popNStack = (stack, n) => stack.splice(stack.length - n, n)
 export const peekStack = (stack, n) => stack[stack.length - n]
 
 export const peekNStack = (stack, n) => stack.slice(stack.length - n, stack.length)
+
+export const clearStack = (stack) => stack.splice(0)
+
+export const pushStackObjects = (stack, objects) => {
+    for (const object of objects) {
+        pushStack(stack, object)
+    }
+}
 
 const require1Operation = (state, code) => {
     cleanErrorState(state)
@@ -99,6 +116,15 @@ const require2OperationKeep = (state, code) => {
     }
 }
 
+const requireNOperationKeep = (state, n, code) => {
+    cleanErrorState(state)
+    if (requireStack(state, n)) {
+        const { stack } = state
+
+        code(stack)
+    }
+}
+
 const requireNsOperationKeep = (state, code) => {
     cleanErrorState(state)
     if (requireStackTypes(state, 1, [NUMBER])) {
@@ -113,89 +139,74 @@ const requireNsOperationKeep = (state, code) => {
     }
 }
 
-const requireNsOperation = (state, code) => requireNsOperationKeep(state, (stack, n) => {
-    const objects = popNStack(stack, n)
-    code(stack, objects)
-})
+const requireNsOperation = (state, code) => requireNsOperationKeep(
+    state,
+    (stack, n) => code(stack, popNStack(stack, n))
+)
 
-const unaryNumberOperation = (state, unaryFunc) => {
-    require1OperationType(state, NUMBER, (stack, object) => {
-        const { element: v } = object
-        pushStack(stack, createNumber(unaryFunc(v)))
-    })
-}
+const unaryNumberOperation = (state, unaryFunc) => require1OperationType(
+    state,
+    NUMBER,
+    (stack, object) => pushStack(stack, createNumber(unaryFunc(object.element)))
+)
 
-const binaryNumberOperation = (state, binaryFunc) => {
-    require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => {
-        const { element: v1 } = object1
-        const { element: v2 } = object2
-        pushStack(stack, createNumber(binaryFunc(v1, v2)))
-    })
-}
 
-const commands = {
+const binaryNumberOperation = (state, binaryFunc) => require2OperationTypes(
+    state,
+    [NUMBER, NUMBER],
+    (stack, object1, object2) => pushStack(stack, createNumber(binaryFunc(object1.element, object2.element)))
+)
+
+
+export const commands = {
     '+': (state) => binaryNumberOperation(state, (v1, v2) => v1 + v2),
     '-': (state) => binaryNumberOperation(state, (v1, v2) => v1 - v2),
     '*': (state) => binaryNumberOperation(state, (v1, v2) => v1 * v2),
     '/': (state) => binaryNumberOperation(state, (v1, v2) => v1 / v2),
+    'depth': (state) => pushStack(state.stack, createNumber(state.stack.length)),
     'drop': (state) => require1Operation(state, () => { }),
     'dup': (state) => require1OperationKeep(state, (stack, object1) => pushStack(stack, dupObject(object1))),
     'dup2': (state) => require2OperationKeep(state, (stack, object1, object2) => {
-        const object1dup = dupObject(object1)
-        const object2dup = dupObject(object2)
-        pushStack(stack, object1dup)
-        pushStack(stack, object2dup)
+        pushStack(stack, dupObject(object1))
+        pushStack(stack, dupObject(object2))
     }),
-    'dupn': (state) => requireNsOperationKeep(state, (stack, n) => {
-        const objects = peekNStack(stack, n)
-        console.log({objects, n})
-        for (const object of objects) {
-            pushStack(stack, dupObject(object))
-        }
-    }),
+    'dupn': (state) => requireNsOperationKeep(state, (stack, n) => pushStackObjects(stack, peekNStack(stack, n).map((object) => dupObject(object)))),
     'swap': (state) => require2Operation(state, (stack, object1, object2) => {
         pushStack(stack, object2)
         pushStack(stack, object1)
     }),
-    'pick': (state) => {
-        cleanErrorState(state)
-        if (requireStackTypes(state, 1, [NUMBER])) {
-            const { stack } = state
-
-            const objectN = peekStack(stack, 1)
-            if (requireStack(state, objectN.element + 1)) {
-                popStack(stack)
-                const object = dupObject(peekStack(stack, objectN.element))
-                pushStack(stack, object)
-            }
-        }
-    },
-    'ip': (state) => unaryNumberOperation(state, (v) => v>=0 ? Math.floor(v) : Math.floor(v)+1),
-    'fp': (state) => unaryNumberOperation(state, (v) => v>=0 ? v-Math.floor(v) : v-Math.floor(v)-1),
+    'dropn': (state) => requireNsOperation(state, () => { }),
+    'pick': (state) => requireNsOperationKeep(state, (stack, n) => pushStack(stack, dupObject(peekStack(stack, n)))),
+    'over': (state) => requireNOperationKeep(state, 2, (stack) => pushStack(stack, dupObject(peekStack(stack, 2)))),
+    'ip': (state) => unaryNumberOperation(state, (v) => v >= 0 ? Math.floor(v) : Math.floor(v) + 1),
+    'fp': (state) => unaryNumberOperation(state, (v) => v >= 0 ? v - Math.floor(v) : v - Math.floor(v) - 1),
     'neg': (state) => unaryNumberOperation(state, (v) => -v),
-    'inv': (state) => unaryNumberOperation(state, (v) => 1/v),
+    'inv': (state) => unaryNumberOperation(state, (v) => 1 / v),
     'roll': (state) => requireNsOperation(state, (stack, objects) => {
-        for (const object of objects.slice(1)) {
-            pushStack(stack, object)
-        }
+        pushStackObjects(stack, objects.slice(1))
         pushStack(stack, objects[0])
     }),
     'rolld': (state) => requireNsOperation(state, (stack, objects) => {
         pushStack(stack, objects[objects.length - 1])
-        for (const object of objects.slice(0, objects.length - 1)) {
-            pushStack(stack, object)
-        }
+        pushStackObjects(stack, objects.slice(0, objects.length - 1))
     }),
+    'sto': (state) => require2OperationTypes(state, [null, VAR], (stack, object1, object2) => state.root[object2.name] = object1),
+    'clear': (state) => clearStack(state.stack),
     '->list': (state) => requireNsOperation(state, (stack, objects) => pushStack(stack, createList(objects))),
-    'list->': (state) => require1OperationType(state, LIST, (stack, object) => {
-        const objects = object.element
-        for (const newObject of objects) {
-            pushStack(stack, newObject)
-        }
-    })
+    'list->': (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element))
 }
 
-const parseLexem = (input) => {
+export const keywords = {
+    '<<': true,
+    '>>': true,
+    '->': true,
+    'if': true,
+    'then': true,
+    'else': true,
+    'end': true,
+}
+
+const parseLexem = (state, input) => {
     const asFloat = Number.parseFloat(input)
     if (!isNaN(asFloat)) {
         return createNumber(asFloat)
@@ -203,10 +214,20 @@ const parseLexem = (input) => {
     if (commands[input]) {
         return createCommand(input, commands[input])
     }
+    if (keywords[input]) {
+        return createKeyword(input, keywords[input])
+    }
+    if (state.root[input]) {
+        return state.root[input]
+    }
+    if (input.startsWith("'") && input.endsWith("'")) {
+        const name = input.slice(1, input.length - 1)
+        return createVar(name)
+    }
     return createVar(input)
 }
 
-export const findLexem = function*(input) {
+export const findLexem = function* (input) {
     for (const inputPart of input.split(' ')) {
         if (inputPart.length > 0) {
             yield inputPart
@@ -214,9 +235,9 @@ export const findLexem = function*(input) {
     }
 }
 
-export const parseInput = function* (input) {
+export const parseInput = function* (state, input) {
     for (const inputPart of findLexem(input)) {
-        yield parseLexem(inputPart)
+        yield parseLexem(state, inputPart)
     }
 }
 
@@ -224,12 +245,15 @@ export const addInput = (state, input) => {
     const { stack } = state
     cleanErrorState(state)
 
-    for (const item of parseInput(input)) {
+    for (const item of parseInput(state, input)) {
         if (item.type === COMMAND) {
             item.element(state)
         } else {
             pushStack(stack, item)
         }
     }
-    state.input = ''
+    if (!state.keepInput) {
+        state.input = ''
+    }
+
 }

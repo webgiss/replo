@@ -8,6 +8,8 @@ const rplSlice = createModule({
         stack: [],
         input: '',
         error: null,
+        keepInput: false,
+        root: {},
     },
 
     reducers: {
