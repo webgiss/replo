@@ -20,6 +20,7 @@ build:
 
 release:
 	bash -c '! [[ `git status --porcelain` ]]' || (echo "You must have commited everything before running a release" && false)
+	yarn
 	yarn version patch
 	git add .
 	git commit -m "v$$($(VERSION_CHECKER))"
@@ -32,6 +33,7 @@ release:
 
 milestone-release:
 	bash -c '! [[ `git status --porcelain` ]]' || (echo "You must have commited everything before running a release" && false)
+	yarn
 	yarn version minor
 	git add .
 	git commit -m "v$$($(VERSION_CHECKER))"
