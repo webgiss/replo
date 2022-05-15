@@ -171,6 +171,9 @@ const commands = {
         }
     },
     'ip': (state) => unaryNumberOperation(state, (v) => Math.floor(v)),
+    'fp': (state) => unaryNumberOperation(state, (v) => v-Math.floor(v)),
+    'neg': (state) => unaryNumberOperation(state, (v) => -v),
+    'inv': (state) => unaryNumberOperation(state, (v) => 1/v),
     'roll': (state) => requireNsOperation(state, (stack, objects) => {
         for (const object of objects.slice(1)) {
             pushStack(stack, object)
