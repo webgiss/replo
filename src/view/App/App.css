@@ -18,3 +18,17 @@
     margin: 0;
     padding: 0px;
 }
+.App {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0px;
+}
+
+.AppInfo {
+    width: 100%;
+    flex-grow: 1;
+    font-size: 0.65em;
+    text-align: right;
+}
