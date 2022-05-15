@@ -170,8 +170,8 @@ const commands = {
             }
         }
     },
-    'ip': (state) => unaryNumberOperation(state, (v) => Math.floor(v)),
-    'fp': (state) => unaryNumberOperation(state, (v) => v-Math.floor(v)),
+    'ip': (state) => unaryNumberOperation(state, (v) => v>=0 ? Math.floor(v) : Math.floor(v)+1),
+    'fp': (state) => unaryNumberOperation(state, (v) => v>=0 ? v-Math.floor(v) : v-Math.floor(v)-1),
     'neg': (state) => unaryNumberOperation(state, (v) => -v),
     'inv': (state) => unaryNumberOperation(state, (v) => 1/v),
     'roll': (state) => requireNsOperation(state, (stack, objects) => {
