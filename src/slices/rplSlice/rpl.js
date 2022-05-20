@@ -271,13 +271,13 @@ const createLexer = () => {
         return "VARIABLE"
     }, []);
 
-    lexer.addRule(/("[^\"]+")/, function (lexeme) {
+    lexer.addRule(/("[^"]+")/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
         return "STRING"
     }, []);
 
-    lexer.addRule(/([\-\*\+\/])/, function (lexeme) {
+    lexer.addRule(/([-*+/])/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
         return "OPERATOR"
