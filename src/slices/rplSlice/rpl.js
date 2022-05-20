@@ -1,5 +1,8 @@
 import { createCommand, createKeyword, createList, createNumber, createVar, dupObject } from "./objects"
 import { COMMAND, LIST, NUMBER, VAR } from "./objectTypes"
+import Lexer from 'lex'
+import exportOnWindow from "../../tools/exportOnWindow"
+
 
 export const setError = (state, text, keepInput) => {
     state.error = text
@@ -206,6 +209,8 @@ export const keywords = {
     'end': true,
 }
 
+
+
 const parseLexem = (state, input) => {
     const asFloat = Number.parseFloat(input)
     if (!isNaN(asFloat)) {
@@ -227,13 +232,90 @@ const parseLexem = (state, input) => {
     return createVar(input)
 }
 
-export const findLexem = function* (input) {
+export const findLexem_basic = function* (input) {
     for (const inputPart of input.split(' ')) {
         if (inputPart.length > 0) {
             yield inputPart
         }
     }
 }
+
+const createLexer = () => {
+    let row = 1;
+    let col = 1;
+
+    const lexer = new Lexer(function (char) {
+        throw new Error("Unexpected character at row " + row + ", col " + col + ": " + char);
+    });
+
+    lexer.addRule(/\n/, function () {
+        row++;
+        col = 1;
+    }, []);
+
+    lexer.addRule(/(-?[0-9]+(?:\.[0-9]+)?)/, function (lexeme) {
+        col += lexeme.length;
+        this.yytext = lexeme
+        return "NUMBER"
+    }, []);
+
+    lexer.addRule(/([a-zA-Z_][a-zA-Z0-9_]*)/, function (lexeme) {
+        col += lexeme.length;
+        this.yytext = lexeme
+        return "SYMBOL"
+    }, []);
+
+    lexer.addRule(/('[a-zA-Z_][a-zA-Z0-9_]*')/, function (lexeme) {
+        col += lexeme.length;
+        this.yytext = lexeme
+        return "VARIABLE"
+    }, []);
+
+    lexer.addRule(/("[^\"]+")/, function (lexeme) {
+        col += lexeme.length;
+        this.yytext = lexeme
+        return "STRING"
+    }, []);
+
+    lexer.addRule(/([\-\*\+\/])/, function (lexeme) {
+        col += lexeme.length;
+        this.yytext = lexeme
+        return "OPERATOR"
+    }, []);
+
+    lexer.addRule(/(<<|>>|if|then|else|end|\{|\})/, function (lexeme) {
+        col += lexeme.length;
+        this.yytext = lexeme
+        return "KEYWORD"
+    }, []);
+
+    lexer.addRule(/ /, function () {
+        col++;
+    }, []);
+
+    return lexer
+}
+
+export const findLexem_lexer = function* (input) {
+    const lexer = createLexer();
+    lexer.input = input;
+
+    try {
+        const lexemes = []
+        let item_type = lexer.lex()
+        while (item_type !== undefined) {
+            lexemes.push(lexer.yytext)
+            item_type = lexer.lex()
+        }
+        for (let lexeme of lexemes) {
+            yield lexeme
+        }
+    } catch (e) {
+
+    }
+}
+
+export const findLexem = findLexem_lexer
 
 export const parseInput = function* (state, input) {
     for (const inputPart of findLexem(input)) {
@@ -257,3 +339,5 @@ export const addInput = (state, input) => {
     }
 
 }
+
+exportOnWindow({ Lexer })
