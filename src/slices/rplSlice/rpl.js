@@ -185,6 +185,15 @@ export const commands = {
     'fp': (state) => unaryNumberOperation(state, (v) => v >= 0 ? v - Math.floor(v) : v - Math.floor(v) - 1),
     'neg': (state) => unaryNumberOperation(state, (v) => -v),
     'inv': (state) => unaryNumberOperation(state, (v) => 1 / v),
+    'sqrt': (state) => unaryNumberOperation(state, (v) => Math.sqrt(v)),
+    'cos': (state) => unaryNumberOperation(state, (v) => Math.cos(v)),
+    'sin': (state) => unaryNumberOperation(state, (v) => Math.sin(v)),
+    'cosh': (state) => unaryNumberOperation(state, (v) => Math.cosh(v)),
+    'sinh': (state) => unaryNumberOperation(state, (v) => Math.sinh(v)),
+    'acos': (state) => unaryNumberOperation(state, (v) => Math.acos(v)),
+    'asin': (state) => unaryNumberOperation(state, (v) => Math.asin(v)),
+    'acosh': (state) => unaryNumberOperation(state, (v) => Math.acosh(v)),
+    'asinh': (state) => unaryNumberOperation(state, (v) => Math.asinh(v)),
     'roll': (state) => requireNsOperation(state, (stack, objects) => {
         pushStackObjects(stack, objects.slice(1))
         pushStack(stack, objects[0])
