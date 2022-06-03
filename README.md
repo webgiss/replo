@@ -6,3 +6,4 @@ RePLo is a simple RPL calculator. It is inspired by the HP48 environnement, but 
 
 * **source page** : https://github.com/webgiss/replo
 * **demo page** : https://replo.jgi.fr/
+* **Tasks** : https://github.com/webgiss/replo/projects/1
