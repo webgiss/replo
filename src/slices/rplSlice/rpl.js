@@ -210,11 +210,19 @@ export const commands = {
             setError(state, `${object2.name} is a system command`, false)
         }
     }),
+    'rcl': (state) => require1OperationType(state, VAR, (stack, object) => {
+        if (commands[object.name] === undefined) {
+            pushStack(state.root[object.name])
+        } else {
+            pushStack(stack, object)
+            setError(state, `${object.name} is a system command`, false)
+        }
+    }),
     'clear': (state) => clearStack(state.stack),
     '->list': (state) => requireNsOperation(state, (stack, objects) => pushStack(stack, createList(objects))),
     'list->': (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element)),
-    'pi': (state) => pushStack(state.stack, Math.PI),
-    'e': (state) => pushStack(state.stack, Math.E),
+    'pi': (state) => pushStack(state.stack, createNumber(Math.PI)),
+    'e': (state) => pushStack(state.stack, createNumber(Math.E)),
 }
 
 export const keywords = {
