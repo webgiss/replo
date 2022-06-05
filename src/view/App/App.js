@@ -11,7 +11,7 @@ function App() {
     return (
         <div className="App">
             <Stack />
-            <div class='AppInfo'><span className='Name'>Replo</span> version <span className='Version'>{version}</span> - Sources: <a href='https://github.com/webgiss/replo'>https://github.com/webgiss/replo</a></div>
+            <div className='AppInfo'><span className='Name'>Replo</span> version <span className='Version'>{version}</span> - Sources: <a href='https://github.com/webgiss/replo'>https://github.com/webgiss/replo</a></div>
         </div>
     );
 }
