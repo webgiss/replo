@@ -1,5 +1,5 @@
 import { createCommand, createKeyword, createList, createNumber, createVar, createString, dupObject } from "./objects"
-import { COMMAND, KEYWORD, LIST, NUMBER, OPERATOR, STRING, VAR } from "./objectTypes"
+import { COMMAND, KEYWORD, LIST, NUMBER, STRING, VAR } from "./objectTypes"
 import Lexer from 'lex'
 import exportOnWindow from "../../tools/exportOnWindow"
 
@@ -202,7 +202,14 @@ export const commands = {
         pushStack(stack, objects[objects.length - 1])
         pushStackObjects(stack, objects.slice(0, objects.length - 1))
     }),
-    'sto': (state) => require2OperationTypes(state, [null, VAR], (stack, object1, object2) => state.root[object2.name] = object1),
+    'sto': (state) => require2OperationTypes(state, [null, VAR], (stack, object1, object2) => {
+        if (commands[object2.name] === undefined) {
+            state.root[object2.name] = object1
+        } else {
+            pushStackObjects(stack, [object1, object2])
+            setError(state, `${object2.name} is a system command`, false)
+        }
+    }),
     'clear': (state) => clearStack(state.stack),
     '->list': (state) => requireNsOperation(state, (stack, objects) => pushStack(stack, createList(objects))),
     'list->': (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element))
@@ -225,7 +232,7 @@ const parseLexem = (state, type, input) => {
     if ((type === NUMBER) && !isNaN(asFloat)) {
         return createNumber(asFloat)
     }
-    if (((type === COMMAND) || (type === OPERATOR)) && commands[input]) {
+    if ((type === COMMAND) && commands[input]) {
         return createCommand(input, commands[input])
     }
     if ((type === KEYWORD) && keywords[input]) {
@@ -236,7 +243,7 @@ const parseLexem = (state, type, input) => {
         return createVar(name)
     }
     if ((type === STRING) && input.startsWith('"') && input.endsWith('"')) {
-        const content = input.slice(1, input.length- 1)
+        const content = input.slice(1, input.length - 1)
         return createString(content)
     }
     if (state.root[input]) {
@@ -264,13 +271,13 @@ const createLexer = () => {
         return NUMBER
     }, []);
 
-    lexer.addRule(/((?:->)?[a-zA-Z_][a-zA-Z0-9_\-+*/<>]*)/, function (lexeme) {
+    lexer.addRule(/([a-zA-Z_\-+*/<>][a-zA-Z_\-+*/<>0-9]*)/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
         return COMMAND
     }, []);
 
-    lexer.addRule(/('(?:->)?[a-zA-Z_][a-zA-Z0-9_\-+*/<>]*')/, function (lexeme) {
+    lexer.addRule(/('[a-zA-Z_\-+*/<>][a-zA-Z_\-+*/<>0-9]*')/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
         return VAR
@@ -280,12 +287,6 @@ const createLexer = () => {
         col += lexeme.length;
         this.yytext = lexeme
         return STRING
-    }, []);
-
-    lexer.addRule(/([-*+/])/, function (lexeme) {
-        col += lexeme.length;
-        this.yytext = lexeme
-        return OPERATOR
     }, []);
 
     lexer.addRule(/(<<|>>|if|then|else|end|\{|\})/, function (lexeme) {
@@ -309,21 +310,26 @@ export const findLexem = function* (input) {
         const lexemes = []
         let item_type = lexer.lex()
         while (item_type !== undefined) {
-            lexemes.push({type: item_type, value: lexer.yytext})
+            lexemes.push({ type: item_type, value: lexer.yytext })
             item_type = lexer.lex()
         }
         for (let lexeme of lexemes) {
             yield lexeme
         }
     } catch (e) {
-
+        throw (e)
     }
 }
 
 export const parseInput = function* (state, input) {
-    for (const {type, value: inputPart} of findLexem(input)) {
-        yield parseLexem(state, type, inputPart)
+    try {
+        for (const { type, value: inputPart } of findLexem(input)) {
+            yield parseLexem(state, type, inputPart)
+        }
+    } catch (e) {
+        setError(state, e.message, true)
     }
+
 }
 
 export const addInput = (state, input) => {
