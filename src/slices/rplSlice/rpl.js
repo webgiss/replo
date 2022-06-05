@@ -1,5 +1,5 @@
-import { createCommand, createKeyword, createList, createNumber, createVar, dupObject } from "./objects"
-import { COMMAND, LIST, NUMBER, VAR } from "./objectTypes"
+import { createCommand, createKeyword, createList, createNumber, createVar, createString, dupObject } from "./objects"
+import { COMMAND, KEYWORD, LIST, NUMBER, OPERATOR, STRING, VAR } from "./objectTypes"
 import Lexer from 'lex'
 import exportOnWindow from "../../tools/exportOnWindow"
 
@@ -220,33 +220,29 @@ export const keywords = {
 
 
 
-const parseLexem = (state, input) => {
+const parseLexem = (state, type, input) => {
     const asFloat = Number.parseFloat(input)
-    if (!isNaN(asFloat)) {
+    if ((type === NUMBER) && !isNaN(asFloat)) {
         return createNumber(asFloat)
     }
-    if (commands[input]) {
+    if (((type === COMMAND) || (type === OPERATOR)) && commands[input]) {
         return createCommand(input, commands[input])
     }
-    if (keywords[input]) {
+    if ((type === KEYWORD) && keywords[input]) {
         return createKeyword(input, keywords[input])
+    }
+    if ((type === VAR) && input.startsWith("'") && input.endsWith("'")) {
+        const name = input.slice(1, input.length - 1)
+        return createVar(name)
+    }
+    if ((type === STRING) && input.startsWith('"') && input.endsWith('"')) {
+        const content = input.slice(1, input.length- 1)
+        return createString(content)
     }
     if (state.root[input]) {
         return state.root[input]
     }
-    if (input.startsWith("'") && input.endsWith("'")) {
-        const name = input.slice(1, input.length - 1)
-        return createVar(name)
-    }
     return createVar(input)
-}
-
-export const findLexem_basic = function* (input) {
-    for (const inputPart of input.split(' ')) {
-        if (inputPart.length > 0) {
-            yield inputPart
-        }
-    }
 }
 
 const createLexer = () => {
@@ -265,37 +261,37 @@ const createLexer = () => {
     lexer.addRule(/(-?[0-9]+(?:\.[0-9]+)?)/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
-        return "NUMBER"
+        return NUMBER
     }, []);
 
-    lexer.addRule(/([a-zA-Z_][a-zA-Z0-9_]*)/, function (lexeme) {
+    lexer.addRule(/((?:->)?[a-zA-Z_][a-zA-Z0-9_\-+*/<>]*)/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
-        return "SYMBOL"
+        return COMMAND
     }, []);
 
-    lexer.addRule(/('[a-zA-Z_][a-zA-Z0-9_]*')/, function (lexeme) {
+    lexer.addRule(/('(?:->)?[a-zA-Z_][a-zA-Z0-9_\-+*/<>]*')/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
-        return "VARIABLE"
+        return VAR
     }, []);
 
     lexer.addRule(/("[^"]+")/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
-        return "STRING"
+        return STRING
     }, []);
 
     lexer.addRule(/([-*+/])/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
-        return "OPERATOR"
+        return OPERATOR
     }, []);
 
     lexer.addRule(/(<<|>>|if|then|else|end|\{|\})/, function (lexeme) {
         col += lexeme.length;
         this.yytext = lexeme
-        return "KEYWORD"
+        return KEYWORD
     }, []);
 
     lexer.addRule(/ /, function () {
@@ -305,7 +301,7 @@ const createLexer = () => {
     return lexer
 }
 
-export const findLexem_lexer = function* (input) {
+export const findLexem = function* (input) {
     const lexer = createLexer();
     lexer.input = input;
 
@@ -313,7 +309,7 @@ export const findLexem_lexer = function* (input) {
         const lexemes = []
         let item_type = lexer.lex()
         while (item_type !== undefined) {
-            lexemes.push(lexer.yytext)
+            lexemes.push({type: item_type, value: lexer.yytext})
             item_type = lexer.lex()
         }
         for (let lexeme of lexemes) {
@@ -324,11 +320,9 @@ export const findLexem_lexer = function* (input) {
     }
 }
 
-export const findLexem = findLexem_lexer
-
 export const parseInput = function* (state, input) {
-    for (const inputPart of findLexem(input)) {
-        yield parseLexem(state, inputPart)
+    for (const {type, value: inputPart} of findLexem(input)) {
+        yield parseLexem(state, type, inputPart)
     }
 }
 
