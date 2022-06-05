@@ -212,7 +212,9 @@ export const commands = {
     }),
     'clear': (state) => clearStack(state.stack),
     '->list': (state) => requireNsOperation(state, (stack, objects) => pushStack(stack, createList(objects))),
-    'list->': (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element))
+    'list->': (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element)),
+    'pi': (state) => pushStack(state.stack, Math.PI),
+    'e': (state) => pushStack(state.stack, Math.E),
 }
 
 export const keywords = {
