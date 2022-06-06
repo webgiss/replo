@@ -1,7 +1,7 @@
-import exportOnWindow from "../../tools/exportOnWindow"
-import { createFraction, createList, createNumber, createVar, dupObject } from "./objects"
-import { LIST, NUMBER, VAR, COMMAND, PROGRAM, VARCALL, IFTHENELSEEND, STRING, FRACTION } from "./objectTypes"
+import { createComplex, createFraction, createList, createNumber, createVar, dupObject } from "./objects"
+import { LIST, NUMBER, VAR, COMMAND, PROGRAM, VARCALL, IFTHENELSEEND, STRING, FRACTION, COMPLEX } from "./objectTypes"
 import { add, divide, inv, mult, neg, sub } from "./operators"
+import { getSign } from "./utils"
 
 export const setError = (state, text, keepInput) => {
     state.error = text
@@ -34,7 +34,8 @@ export const requireStackTypes = (state, n, types) => {
     return true
 }
 
-const scalars = [NUMBER, STRING, FRACTION]
+const scalars = [NUMBER, STRING, FRACTION, COMPLEX]
+const realScalars = [NUMBER, FRACTION]
 
 export const requireStackScalars = (state, n) => {
     if (!requireStack(state, n)) {
@@ -44,6 +45,20 @@ export const requireStackScalars = (state, n) => {
     for (let index = 0; index < n; index++) {
         if (!scalars.includes(state.stack[length - n + index].type)) {
             setError(state, `Bad argument type; element [${n - index}] should of scalar type`)
+            return false
+        }
+    }
+    return true
+}
+
+export const requireStackRealScalars = (state, n) => {
+    if (!requireStack(state, n)) {
+        return false
+    }
+    const { length } = state.stack
+    for (let index = 0; index < n; index++) {
+        if (!realScalars.includes(state.stack[length - n + index].type)) {
+            setError(state, `Bad argument type; element [${n - index}] should of real scalar type`)
             return false
         }
     }
@@ -137,6 +152,22 @@ const require2OperationTypes = (state, types, code) => {
 const require2OperationScalars = (state, code) => {
     cleanErrorState(state)
     if (requireStackScalars(state, 2)) {
+        const { stack } = state
+
+        const [object1, object2] = popNStack(stack, 2)
+        try {
+            code(stack, object1, object2)
+        } catch (e) {
+            pushStackObjects(stack, [object1, object2])
+            setError(state, e.message, true)
+        }
+
+    }
+}
+
+const require2OperationRealScalars = (state, code) => {
+    cleanErrorState(state)
+    if (requireStackRealScalars(state, 2)) {
         const { stack } = state
 
         const [object1, object2] = popNStack(stack, 2)
@@ -259,6 +290,14 @@ export const exec = (state, item, { as_input, as_program } = {}) => {
     }
 }
 
+const unfract = (number) => {
+    if(number.type === NUMBER) {
+        return number
+    } else if (number.type === FRACTION) {
+        return createNumber(number.element.num.element / number.element.den.element)
+    }
+    throw new Error(`Unkown type ${number.type}`)
+}
 
 export const commands = {
     '+': (state) => binaryScalarOperation(state, (o1, o2) => add(o1, o2)),
@@ -355,8 +394,23 @@ export const commands = {
     '->fract': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createFraction(object1, object2))),
     'fract->': (state) => require1OperationType(state, FRACTION, (stack, object) => { pushStack(stack, object.element.num); pushStack(stack, object.element.den) }),
     'fract': (state) => require1OperationType(state, NUMBER, (stack, object) => pushStack(stack, createFraction(object, createNumber(1)))),
+    'unfract': (state) => require1OperationType(state, FRACTION, (stack, object) => pushStack(stack, unfract(object))),
+    '->complex': (state) => require2OperationRealScalars(state, (stack, object1, object2) => pushStack(stack, createComplex(object1, object2))),
+    'complex->': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, object.element.re); pushStack(stack, object.element.im) }),
+    'conj': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, createComplex( object.element.re, neg(object.element.im))) }),
+    're': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, object.element.re) }),
+    'im': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, object.element.im) }),
+    'uncomplex': (state) => require1OperationType(state, COMPLEX, (stack, object) => {
+        const { re, im } = object.element
+        if (getSign(im) === 0) {
+            pushStack(stack, re)
+        } else {
+            pushStack(stack, object)
+        }
+
+    }),
+    'complexunfract': (state) => require1OperationType(state, COMPLEX, (stack, object) => pushStack(stack, createComplex(unfract(object.element.re), unfract(object.element.im)))),
     'pi': (state) => pushStack(state.stack, createNumber(Math.PI)),
     'e': (state) => pushStack(state.stack, createNumber(Math.E)),
+    'i': (state) => pushStack(state.stack, createComplex(createNumber(0), createNumber(1))),
 }
-
-exportOnWindow({ createNumber, createFraction })

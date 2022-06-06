@@ -1,20 +1,5 @@
-import { COMMAND, KEYWORD, LIST, NUMBER, STRING, VAR, PROGRAM, IFTHENELSEEND, VARCALL, FRACTION } from "./objectTypes"
-
-const compute_pgcd = (a,b) => {
-    a = Math.floor(Math.abs(a));
-    b = Math.floor(Math.abs(b));
-    if (b > a) {
-       var tmp = a; 
-       a = b; 
-       b = tmp;
-    }
-    while (true) {
-        if (b === 0) return a;
-        a %= b;
-        if (a === 0) return b;
-        b %= a;
-    }
-}
+import { COMMAND, KEYWORD, LIST, NUMBER, STRING, VAR, PROGRAM, IFTHENELSEEND, VARCALL, FRACTION, COMPLEX } from "./objectTypes"
+import { compute_pgcd, getSign } from "./utils"
 
 export const createNumber = (value) => ({ type: NUMBER, element: value, repr: `${value}` })
 export const createString = (value) => ({ type: STRING, element: value, repr: `"${value}"` })
@@ -29,13 +14,17 @@ export const createIfThenElseEnd = (objects_if, objects_then, objects_else) => (
 export const createFraction = (num, den) => {
     const pgcd = compute_pgcd(num.element, den.element)
     if (pgcd !== 1) {
-        num = createNumber(num.element/pgcd)
-        den = createNumber(den.element/pgcd)
+        num = createNumber(num.element / pgcd)
+        den = createNumber(den.element / pgcd)
     }
     if (den.element < 0) {
         num = createNumber(-num.element)
         den = createNumber(-den.element)
     }
-    return { type: FRACTION, element: { num, den }, repr: `${num.element}/${den.element}` }
+    return { type: FRACTION, element: { num, den }, repr: `${num.repr}/${den.repr}` }
 }
+export const createComplex = (re, im) => {
+    return { type: COMPLEX, element: { re, im }, repr: `${re.repr}${getSign(im) >= 0 ? '+' : ''}${im.repr}i` }
+}
+
 
