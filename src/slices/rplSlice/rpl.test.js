@@ -1,5 +1,7 @@
+import { requireStack } from './commands'
 import { createNumber } from './objects'
-import { findLexem, requireStack } from './rpl'
+import { parse } from './rplSyntax'
+// import { findLexem, requireStack } from './rpl'
 
 const basicState = {
     stack: [],
@@ -38,20 +40,28 @@ describe('requireStack', () => {
     })
 })
 
-describe('findLexem', () => {
+describe('parse', () => {
     const findLexemTest = (text, input, expected) => it(text, () => {
-        const actual = [...findLexem(input)]
+        const actual = [...parse(input)]
 
         expect(actual).toStrictEqual(expected)
     })
     findLexemTest('should not return elements for an empty string', '', [])
-    findLexemTest('should split on spaces for basical examples', '7 3 +', ['7', '3', '+'])
+    findLexemTest('should split on spaces for basical examples', '7 3 +', [
+        { type: 'NUMBER', element: 7, repr: '7' }, 
+        { type: 'NUMBER', element: 3, repr: '3' }, 
+        { type: 'COMMAND', name: '+', repr: '+', element: '+' }
+    ])
 
-    // Old implementation
-    // findLexemTest('should split between a number and an operation (failure)', '7 3+', ['7','3+'])
-    // findLexemTest('should split on spaces inside strings', '1 2 "poide 3" 4', ['1','2', '"poide', '3"', '4'])
-
-    // Goal implementation
-    findLexemTest('should split between a number and an operation', '7 3+', ['7', '3', '+'])
-    findLexemTest('should split on spaces inside strings', '1 2 "poide 3" 4', ['1', '2', '"poide 3"', '4'])
+    findLexemTest('should split between a number and an operation', '7 3+', [
+        { type: 'NUMBER', element: 7, repr: '7' }, 
+        { type: 'NUMBER', element: 3, repr: '3' }, 
+        { type: 'COMMAND', name: '+', repr: '+', element: '+' }
+    ])
+    findLexemTest('should split on spaces inside strings', '1 2 "poide 3" 4', [
+        { type: 'NUMBER', element: 1, repr: '1' }, 
+        { type: 'NUMBER', element: 2, repr: '2' }, 
+        { type: 'STRING', element: "poide 3", repr: '"poide 3"' }, 
+        { type: 'NUMBER', element: 4, repr: '4' }, 
+    ])
 })

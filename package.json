@@ -23,6 +23,7 @@
     "web-vitals": "^2.1.0"
   },
   "scripts": {
+    "jison": "jison src/slices/rplSlice/rplSyntax.jison -o src/slices/rplSlice/rplSyntax.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
@@ -47,6 +48,7 @@
     ]
   },
   "devDependencies": {
+    "jison": "^0.4.18",
     "react-git-info": "^2.0.1"
   }
 }
