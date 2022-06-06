@@ -1,4 +1,6 @@
 export const NUMBER = 'NUMBER'
+export const FRACTION = 'FRACTION'
+export const COMPLEX = 'COMPLEX'
 export const COMMAND = 'COMMAND'
 export const STRING = 'STRING'
 export const VAR = 'VAR'

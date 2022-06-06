@@ -1,5 +1,7 @@
-import { createList, createNumber, createVar, dupObject } from "./objects"
-import { LIST, NUMBER, VAR, COMMAND, PROGRAM, VARCALL, IFTHENELSEEND } from "./objectTypes"
+import exportOnWindow from "../../tools/exportOnWindow"
+import { createFraction, createList, createNumber, createVar, dupObject } from "./objects"
+import { LIST, NUMBER, VAR, COMMAND, PROGRAM, VARCALL, IFTHENELSEEND, STRING, FRACTION } from "./objectTypes"
+import { add, divide, inv, mult, neg, sub } from "./operators"
 
 export const setError = (state, text, keepInput) => {
     state.error = text
@@ -26,6 +28,22 @@ export const requireStackTypes = (state, n, types) => {
     for (let index = 0; index < n; index++) {
         if ((types[index] !== null) && (state.stack[length - n + index].type !== types[index])) {
             setError(state, `Bad argument type; element [${n - index}] should of type <${types[index]}>`)
+            return false
+        }
+    }
+    return true
+}
+
+const scalars = [NUMBER, STRING, FRACTION]
+
+export const requireStackScalars = (state, n) => {
+    if (!requireStack(state, n)) {
+        return false
+    }
+    const { length } = state.stack
+    for (let index = 0; index < n; index++) {
+        if (!scalars.includes(state.stack[length - n + index].type)) {
+            setError(state, `Bad argument type; element [${n - index}] should of scalar type`)
             return false
         }
     }
@@ -76,6 +94,16 @@ const require1OperationType = (state, type, code) => {
     }
 }
 
+const require1OperationScalar = (state, code) => {
+    cleanErrorState(state)
+    if (requireStackScalars(state, 1)) {
+        const { stack } = state
+
+        const object1 = popStack(stack)
+        code(stack, object1)
+    }
+}
+
 const require1OperationKeep = (state, code) => {
     cleanErrorState(state)
     if (requireStack(state, 1)) {
@@ -105,6 +133,23 @@ const require2OperationTypes = (state, types, code) => {
         code(stack, object1, object2)
     }
 }
+
+const require2OperationScalars = (state, code) => {
+    cleanErrorState(state)
+    if (requireStackScalars(state, 2)) {
+        const { stack } = state
+
+        const [object1, object2] = popNStack(stack, 2)
+        try {
+            code(stack, object1, object2)
+        } catch (e) {
+            pushStackObjects(stack, [object1, object2])
+            setError(state, e.message, true)
+        }
+
+    }
+}
+
 
 const require2OperationKeep = (state, code) => {
     cleanErrorState(state)
@@ -150,11 +195,20 @@ const unaryNumberOperation = (state, unaryFunc) => require1OperationType(
     (stack, object) => pushStack(stack, createNumber(unaryFunc(object.element)))
 )
 
-
-const binaryNumberOperation = (state, binaryFunc) => require2OperationTypes(
+const unaryScalarOperation = (state, unaryFunc) => require1OperationScalar(
     state,
-    [NUMBER, NUMBER],
-    (stack, object1, object2) => pushStack(stack, createNumber(binaryFunc(object1.element, object2.element)))
+    (stack, object) => pushStack(stack, unaryFunc(object))
+)
+
+// const binaryNumberOperation = (state, binaryFunc) => require2OperationTypes(
+//     state,
+//     [NUMBER, NUMBER],
+//     (stack, object1, object2) => pushStack(stack, createNumber(binaryFunc(object1.element, object2.element)))
+// )
+
+const binaryScalarOperation = (state, binaryFunc) => require2OperationScalars(
+    state,
+    (stack, object1, object2) => pushStack(stack, binaryFunc(object1, object2))
 )
 
 export const execs = (state, items) => {
@@ -207,10 +261,10 @@ export const exec = (state, item, { as_input, as_program } = {}) => {
 
 
 export const commands = {
-    '+': (state) => binaryNumberOperation(state, (v1, v2) => v1 + v2),
-    '-': (state) => binaryNumberOperation(state, (v1, v2) => v1 - v2),
-    '*': (state) => binaryNumberOperation(state, (v1, v2) => v1 * v2),
-    '/': (state) => binaryNumberOperation(state, (v1, v2) => v1 / v2),
+    '+': (state) => binaryScalarOperation(state, (o1, o2) => add(o1, o2)),
+    '-': (state) => binaryScalarOperation(state, (o1, o2) => sub(o1, o2)),
+    '*': (state) => binaryScalarOperation(state, (o1, o2) => mult(o1, o2)),
+    '/': (state) => binaryScalarOperation(state, (o1, o2) => divide(o1, o2)),
     'depth': (state) => pushStack(state.stack, createNumber(state.stack.length)),
     'drop': (state) => require1Operation(state, () => { }),
     'dup': (state) => require1OperationKeep(state, (stack, object1) => pushStack(stack, dupObject(object1))),
@@ -228,8 +282,8 @@ export const commands = {
     'over': (state) => requireNOperationKeep(state, 2, (stack) => pushStack(stack, dupObject(peekStack(stack, 2)))),
     'ip': (state) => unaryNumberOperation(state, (v) => v >= 0 ? Math.floor(v) : Math.floor(v) + 1),
     'fp': (state) => unaryNumberOperation(state, (v) => v >= 0 ? v - Math.floor(v) : v - Math.floor(v) - 1),
-    'neg': (state) => unaryNumberOperation(state, (v) => -v),
-    'inv': (state) => unaryNumberOperation(state, (v) => 1 / v),
+    'neg': (state) => unaryScalarOperation(state, (v) => neg(v)),
+    'inv': (state) => unaryScalarOperation(state, (v) => inv(v)),
     'sqrt': (state) => unaryNumberOperation(state, (v) => Math.sqrt(v)),
     'cos': (state) => unaryNumberOperation(state, (v) => Math.cos(v)),
     'sin': (state) => unaryNumberOperation(state, (v) => Math.sin(v)),
@@ -239,6 +293,8 @@ export const commands = {
     'asin': (state) => unaryNumberOperation(state, (v) => Math.asin(v)),
     'acosh': (state) => unaryNumberOperation(state, (v) => Math.acosh(v)),
     'asinh': (state) => unaryNumberOperation(state, (v) => Math.asinh(v)),
+    'ln': (state) => unaryNumberOperation(state, (v) => Math.log(v)),
+    'exp': (state) => unaryNumberOperation(state, (v) => Math.exp(v)),
     'roll': (state) => requireNsOperation(state, (stack, objects) => {
         pushStackObjects(stack, objects.slice(1))
         pushStack(stack, objects[0])
@@ -293,8 +349,14 @@ export const commands = {
         pushStack(state.stack, list)
     },
     'clear': (state) => clearStack(state.stack),
+
     '->list': (state) => requireNsOperation(state, (stack, objects) => pushStack(stack, createList(objects))),
     'list->': (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element)),
+    '->fract': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createFraction(object1, object2))),
+    'fract->': (state) => require1OperationType(state, FRACTION, (stack, object) => { pushStack(stack, object.element.num); pushStack(stack, object.element.den) }),
+    'fract': (state) => require1OperationType(state, NUMBER, (stack, object) => pushStack(stack, createFraction(object, createNumber(1)))),
     'pi': (state) => pushStack(state.stack, createNumber(Math.PI)),
     'e': (state) => pushStack(state.stack, createNumber(Math.E)),
 }
+
+exportOnWindow({ createNumber, createFraction })
