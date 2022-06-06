@@ -23,7 +23,9 @@
     "web-vitals": "^2.1.0"
   },
   "scripts": {
-    "jison": "jison src/slices/rplSlice/rplSyntax.jison -o src/slices/rplSlice/rplSyntax.js",
+    "rplSyntax": "run-s rplSyntax:jison rplSyntax:patch",
+    "rplSyntax:jison": "jison src/slices/rplSlice/rplSyntax.jison -o src/slices/rplSlice/rplSyntax.js -m js",
+    "rplSyntax:patch": "node -e \"const fs = require('fs'); const fp = './src/slices/rplSlice/rplSyntax.js'; const d = fs.readFileSync(fp); fs.writeFileSync(fp, '/* eslint-disable */\\n' + d + '\\nexport default rplSyntax;\\n');\"",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
@@ -49,6 +51,8 @@
   },
   "devDependencies": {
     "jison": "^0.4.18",
-    "react-git-info": "^2.0.1"
+    "react-git-info": "^2.0.1",
+    "run-s": "^0.0.0",
+    "yarn-run-all": "^3.1.1"
   }
 }

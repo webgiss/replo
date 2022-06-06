@@ -655,13 +655,4 @@ function Parser () {
 Parser.prototype = parser;parser.Parser = Parser;
 return new Parser;
 })();
-
-
-if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
-exports.parser = rplSyntax;
-exports.Parser = rplSyntax.Parser;
-exports.parse = function () { return rplSyntax.parse.apply(rplSyntax, arguments); };
-if (typeof module !== 'undefined' && require.main === module) {
-  exports.main(process.argv.slice(1));
-}
-}
+export default rplSyntax;

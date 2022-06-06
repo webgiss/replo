@@ -1,5 +1,4 @@
 %{
-/* eslint-disable */
 const {createNumber, createString, createCommand, createVar, createVarCall, createList, dupObject, createKeyword, createProgram, createIfThenElseEnd} = require('./objects.js')
 const {commands} = require('./commands.js')
 %}
