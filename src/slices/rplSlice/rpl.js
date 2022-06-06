@@ -24,5 +24,4 @@ export const addInput = (state, input) => {
 
 }
 
-// exportOnWindow({ Lexer })
 exportOnWindow({ parser })

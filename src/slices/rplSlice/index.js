@@ -67,8 +67,6 @@ rplSlice.stateHooks = [
             dispatch(rplSlice.actions.rootLoad({ keys }))
         },
     },
-
-
 ];
 
 export const actions = rplSlice.actions;
