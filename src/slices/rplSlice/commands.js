@@ -1,6 +1,6 @@
 import { createComplex, createFraction, createList, createNumber, createVar, dupObject } from "./objects"
 import { LIST, NUMBER, VAR, COMMAND, PROGRAM, VARCALL, IFTHENELSEEND, STRING, FRACTION, COMPLEX } from "./objectTypes"
-import { add, divide, inv, mult, neg, sub } from "./operators"
+import { add, compare, divide, inv, mult, neg, sub } from "./operators"
 import { getSign } from "./utils"
 
 export const setError = (state, text, keepInput) => {
@@ -299,6 +299,8 @@ const unfract = (number) => {
     throw new Error(`Unkown type ${number.type}`)
 }
 
+const createBool = (bool) => bool ? createNumber(1) : createNumber(0)
+
 export const commands = {
     '+': (state) => binaryScalarOperation(state, (o1, o2) => add(o1, o2)),
     '-': (state) => binaryScalarOperation(state, (o1, o2) => sub(o1, o2)),
@@ -388,6 +390,21 @@ export const commands = {
         pushStack(state.stack, list)
     },
     'clear': (state) => clearStack(state.stack),
+    'true' : (state) => pushStack(state.stack, createBool(true)),
+    'false' : (state) => pushStack(state.stack, createBool(false)),
+    '<' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)<0)),
+    '>' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)>0)),
+    '<=' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)<=0)),
+    '>=' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)>=0)),
+    '==' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)===0)),
+    '!=' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)!==0)),
+    'and' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool(object1.element && object2.element))),
+    'or' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool(object1.element || object2.element))),
+    'xor' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool((object1.element?1:0) ^ (object2.element?1:0)))),
+    'not': (state) => require1OperationType(state, NUMBER, (stack, object) => pushStack(stack, createBool(object.element?0:1))),
+    'band' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element & object2.element))),
+    'bor' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element | object2.element))),
+    'bxor' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element ^ object2.element))),
 
     '->list': (state) => requireNsOperation(state, (stack, objects) => pushStack(stack, createList(objects))),
     'list->': (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element)),

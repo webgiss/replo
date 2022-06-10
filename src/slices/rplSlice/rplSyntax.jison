@@ -6,23 +6,23 @@ const {commands} = require('./commands.js')
 %lex
 %%
 
-\n                                          {}
-\s+                                         {}
-\t                                          {}
-"<<"                                        {return '<<'}
-">>"                                        {return '>>'}
-"if"                                        {return 'if'}
-"then"                                      {return 'then'}
-"else"                                      {return 'else'}
-"end"                                       {return 'end'}
-"{"                                         {return '{'}
-"}"                                         {return '}'}
-"-"?[0-9]+("."[0-9]+)?                      {return 'NUMBER'}
-\"[^"]+\"                                   {return 'STRING'}
-<<EOF>>                                     {return 'EOF'}
-"'"[a-zA-Z_\-+*/<>][a-zA-Z_\-+*/<>0-9]*"'"  {return 'VAR'}
-[a-zA-Z_\-+*/<>][a-zA-Z_\-+*/<>0-9]*        {return 'COMMAND'}
-.                                           {return 'INVALID'}
+\n                                            {}
+\s+                                           {}
+\t                                            {}
+"<<"                                          {return '<<'}
+">>"                                          {return '>>'}
+"if"                                          {return 'if'}
+"then"                                        {return 'then'}
+"else"                                        {return 'else'}
+"end"                                         {return 'end'}
+"{"                                           {return '{'}
+"}"                                           {return '}'}
+"-"?[0-9]+("."[0-9]+)?                        {return 'NUMBER'}
+\"[^"]+\"                                     {return 'STRING'}
+<<EOF>>                                       {return 'EOF'}
+"'"[a-zA-Z_\-+*/<>=][a-zA-Z_\-+*/<>=0-9]*"'"  {return 'VAR'}
+[a-zA-Z_\-+*/<>=][a-zA-Z_\-+*/<>=0-9]*        {return 'COMMAND'}
+.                                             {return 'INVALID'}
 
 /lex
 

@@ -162,4 +162,50 @@ export const divideFract = (object1, object2) => {
     return divide(object1, object2)
 }
 
+export const compareJsScalar = (num1, num2) => {
+    if (num1 === num2) {
+        return 0
+    } else if (num1 < num2) {
+        return -1
+    } else if (num1 > num2) {
+        return 1
+    }
+    return 0
+}
+
+export const compare = (object1, object2) => {
+    if (object1.type === STRING && object2.type === STRING) {
+        return compareJsScalar(object1.element, object2.element)
+    }
+    if (object1.type === STRING || object2.type === STRING) {
+        throw new Error(`Can't compare types [${object1.type}] and [${object2.type}]`)
+    }
+    if (object1.type === COMPLEX || object2.type === COMPLEX) {
+        throw new Error(`Can't compare types [${object1.type}] and [${object2.type}]`)
+    }
+    if (object1.type === NUMBER && object2.type === NUMBER) {
+        return compareJsScalar(object1.element, object2.element)
+    }
+    if (object1.type === FRACTION && object2.type === FRACTION) {
+        const { num: num1, den: den1 } = object1.element;
+        const { num: num2, den: den2 } = object2.element;
+
+        return compareJsScalar(num1*den2, num2*den1)
+    }
+    if (object1.type === NUMBER && object2.type === FRACTION) {
+        if (isNumberInteger(object1)) {
+            return compare(createFraction(object1, createNumber(1)), object2)
+        } else {
+            return compare(object1, createNumber(object2.element.num.element / object2.element.den.element))
+        }
+    }
+    if (object1.type === FRACTION && object2.type === NUMBER) {
+        if (isNumberInteger(object2)) {
+            return compare(object1, createFraction(object2, createNumber(1)))
+        } else {
+            return compare(createNumber(object1.element.num.element / object1.element.den.element), object2)
+        }
+    }
+}
+
 exportOnWindow({ add })
