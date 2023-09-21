@@ -301,7 +301,7 @@ const unfract = (number) => {
 
 const createBool = (bool) => bool ? createNumber(1) : createNumber(0)
 
-const command_add = (state) => binaryScalarOperation(state, (o1, o2) => sub(o1, o2))
+const command_add = (state) => binaryScalarOperation(state, (o1, o2) => add(o1, o2))
 const command_sub = (state) => binaryScalarOperation(state, (o1, o2) => sub(o1, o2))
 const command_mul = (state) => binaryScalarOperation(state, (o1, o2) => mult(o1, o2))
 const command_div = (state) => binaryScalarOperation(state, (o1, o2) => divide(o1, o2))
