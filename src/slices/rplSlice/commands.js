@@ -291,7 +291,7 @@ export const exec = (state, item, { as_input, as_program } = {}) => {
 }
 
 const unfract = (number) => {
-    if(number.type === NUMBER) {
+    if (number.type === NUMBER) {
         return number
     } else if (number.type === FRACTION) {
         return createNumber(number.element.num.element / number.element.den.element)
@@ -301,15 +301,34 @@ const unfract = (number) => {
 
 const createBool = (bool) => bool ? createNumber(1) : createNumber(0)
 
+const command_add = (state) => binaryScalarOperation(state, (o1, o2) => sub(o1, o2))
+const command_sub = (state) => binaryScalarOperation(state, (o1, o2) => sub(o1, o2))
+const command_mul = (state) => binaryScalarOperation(state, (o1, o2) => mult(o1, o2))
+const command_div = (state) => binaryScalarOperation(state, (o1, o2) => divide(o1, o2))
+
+const command_lt = (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2) < 0))
+const command_gt = (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2) > 0))
+const command_le = (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2) <= 0))
+const command_ge = (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2) >= 0))
+const command_eq = (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2) === 0))
+const command_neq = (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2) !== 0))
+
+const command_tolist = (state) => requireNsOperation(state, (stack, objects) => pushStack(stack, createList(objects)))
+const command_listto = (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element))
+const command_tofract = (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createFraction(object1, object2)))
+const command_fractto = (state) => require1OperationType(state, FRACTION, (stack, object) => { pushStack(stack, object.element.num); pushStack(stack, object.element.den) })
+const command_tocomplex = (state) => require2OperationRealScalars(state, (stack, object1, object2) => pushStack(stack, createComplex(object1, object2)))
+const command_complexto = (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, object.element.re); pushStack(stack, object.element.im) })
+
 export const commands = {
-    '+': (state) => binaryScalarOperation(state, (o1, o2) => add(o1, o2)),
-    '-': (state) => binaryScalarOperation(state, (o1, o2) => sub(o1, o2)),
-    '*': (state) => binaryScalarOperation(state, (o1, o2) => mult(o1, o2)),
-    '/': (state) => binaryScalarOperation(state, (o1, o2) => divide(o1, o2)),
-    'add': commands['+'],
-    'sub': commands['-'],
-    'mul': commands['*'],
-    'div': commands['/'],
+    '+': command_add,
+    '-': command_sub,
+    '*': command_mul,
+    '/': command_div,
+    'add': command_add,
+    'sub': command_sub,
+    'mul': command_mul,
+    'div': command_div,
     'depth': (state) => pushStack(state.stack, createNumber(state.stack.length)),
     'drop': (state) => require1Operation(state, () => { }),
     'dup': (state) => require1OperationKeep(state, (stack, object1) => pushStack(stack, dupObject(object1))),
@@ -394,43 +413,43 @@ export const commands = {
         pushStack(state.stack, list)
     },
     'clear': (state) => clearStack(state.stack),
-    'true' : (state) => pushStack(state.stack, createBool(true)),
-    'false' : (state) => pushStack(state.stack, createBool(false)),
-    '<' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)<0)),
-    '>' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)>0)),
-    '<=' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)<=0)),
-    '>=' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)>=0)),
-    '==' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)===0)),
-    '!=' : (state) => binaryScalarOperation(state, (o1, o2) => createBool(compare(o1, o2)!==0)),
-    'lt': commands['<'],
-    'gt' : commands['>'],
-    'le' : commands['<='],
-    'ge' : commands['>='],
-    'eq' : commands['=='],
-    'neq' : commands['!='],
-    'and' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool(object1.element && object2.element))),
-    'or' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool(object1.element || object2.element))),
-    'xor' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool((object1.element?1:0) ^ (object2.element?1:0)))),
-    'not': (state) => require1OperationType(state, NUMBER, (stack, object) => pushStack(stack, createBool(object.element?0:1))),
-    'band' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element & object2.element))),
-    'bor' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element | object2.element))),
-    'bxor' : (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element ^ object2.element))),
+    'true': (state) => pushStack(state.stack, createBool(true)),
+    'false': (state) => pushStack(state.stack, createBool(false)),
+    '<': command_lt,
+    '>': command_gt,
+    '<=': command_le,
+    '>=': command_ge,
+    '==': command_eq,
+    '!=': command_neq,
+    'lt': command_lt,
+    'gt': command_gt,
+    'le': command_le,
+    'ge': command_ge,
+    'eq': command_eq,
+    'neq': command_neq,
+    'and': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool(object1.element && object2.element))),
+    'or': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool(object1.element || object2.element))),
+    'xor': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createBool((object1.element ? 1 : 0) ^ (object2.element ? 1 : 0)))),
+    'not': (state) => require1OperationType(state, NUMBER, (stack, object) => pushStack(stack, createBool(object.element ? 0 : 1))),
+    'band': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element & object2.element))),
+    'bor': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element | object2.element))),
+    'bxor': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createNumber(object1.element ^ object2.element))),
 
-    '->list': (state) => requireNsOperation(state, (stack, objects) => pushStack(stack, createList(objects))),
-    'list->': (state) => require1OperationType(state, LIST, (stack, object) => pushStackObjects(stack, object.element)),
-    'tolist': commands['->list'],
-    'listto': commands['list->'],
-    '->fract': (state) => require2OperationTypes(state, [NUMBER, NUMBER], (stack, object1, object2) => pushStack(stack, createFraction(object1, object2))),
-    'fract->': (state) => require1OperationType(state, FRACTION, (stack, object) => { pushStack(stack, object.element.num); pushStack(stack, object.element.den) }),
-    'tofract': commands['->fract'],
-    'fractto': commands['fract->'],
+    '->list': command_tolist,
+    'list->': command_listto,
+    'tolist': command_tolist,
+    'listto': command_listto,
+    '->fract': command_tofract,
+    'fract->': command_fractto,
+    'tofract': command_tofract,
+    'fractto': command_fractto,
     'fract': (state) => require1OperationType(state, NUMBER, (stack, object) => pushStack(stack, createFraction(object, createNumber(1)))),
     'unfract': (state) => require1OperationType(state, FRACTION, (stack, object) => pushStack(stack, unfract(object))),
-    '->complex': (state) => require2OperationRealScalars(state, (stack, object1, object2) => pushStack(stack, createComplex(object1, object2))),
-    'complex->': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, object.element.re); pushStack(stack, object.element.im) }),
-    'tocomplex': commands['->complex'],
-    'complexto': commands['complex->'],
-    'conj': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, createComplex( object.element.re, neg(object.element.im))) }),
+    '->complex': command_tocomplex,
+    'complex->': command_complexto,
+    'tocomplex': command_tocomplex,
+    'complexto': command_complexto,
+    'conj': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, createComplex(object.element.re, neg(object.element.im))) }),
     're': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, object.element.re) }),
     'im': (state) => require1OperationType(state, COMPLEX, (stack, object) => { pushStack(stack, object.element.im) }),
     'uncomplex': (state) => require1OperationType(state, COMPLEX, (stack, object) => {
